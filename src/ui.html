@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gradient Variable Relinker</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 16px;
+      color: #333;
+      background-color: white;
+      font-size: 14px;
+    }
+
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 16px 0 8px 0;
+    }
+
+    button {
+      background-color: #18A0FB;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    button:hover {
+      background-color: #0D8DE3;
+    }
+
+    button.secondary {
+      background-color: white;
+      color: #333;
+      border: 1px solid #E5E5E5;
+    }
+
+    button:disabled {
+      background-color: #EBEBEB;
+      cursor: not-allowed;
+    }
+
+    .button-group {
+      display: flex;
+      margin-bottom: 16px;
+    }
+
+    .progress-indicator {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .spinner {
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      border-top: 2px solid #18A0FB;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .panel {
+      border: 1px solid #E5E5E5;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .info-box {
+      background-color: rgba(24, 160, 251, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .warning-box {
+      background-color: rgba(255, 184, 0, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .list-item {
+      padding: 8px;
+      border-bottom: 1px solid #E5E5E5;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .variable-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .color-preview {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-right: 8px;
+      display: inline-block;
+      border: 1px solid #E5E5E5;
+    }
+
+    .variable-selector {
+      min-width: 150px;
+    }
+
+    .stats {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .node-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #E5E5E5;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 16px;
+      border-top: 1px solid #E5E5E5;
+      padding-top: 16px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      background-color: #EBEBEB;
+      margin-left: 4px;
+    }
+
+    .badge.linear {
+      background-color: rgba(24, 160, 251, 0.2);
+      color: #18A0FB;
+    }
+
+    .badge.radial {
+      background-color: rgba(27, 196, 125, 0.2);
+      color: #1BC47D;
+    }
+
+    .badge.angular {
+      background-color: rgba(255, 184, 0, 0.2);
+      color: #FFB800;
+    }
+
+    select {
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #E5E5E5;
+      background-color: white;
+      font-size: 12px;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #E5E5E5;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab.active {
+      border-bottom: 2px solid #18A0FB;
+      font-weight: 500;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gradient Variable Relinker</h1>
+  
+  <!-- Step 1: Scan for missing gradient variables -->
+  <div id="step1" class="section">
+    <div class="info-box">
+      This plugin helps you find and relink missing or broken variable references in gradient stops. Start by scanning your design for affected gradients.
+    </div>
+    
+    <h2>Scan Scope</h2>
+    <div class="button-group">
+      <button id="scan-selection">Scan Selection</button>
+      <button id="scan-page">Scan Current Page</button>
+      <button id="scan-document">Scan Document</button>
+    </div>
+    
+    <div id="scanning-indicator" class="progress-indicator hidden">
+      <div class="spinner"></div>
+      <span>Scanning for missing gradient variables...</span>
+    </div>
+  </div>
+  
+  <!-- Step 2: Show results and allow variable rebinding -->
+  <div id="step2" class="section hidden">
+    <div class="tabs">
+      <div class="tab active" data-tab="missing-variables">Missing Variables</div>
+      <div class="tab" data-tab="affected-nodes">Affected Nodes</div>
+    </div>
+    
+    <div id="missing-variables" class="tab-content active">
+      <div class="stats" id="variable-stats">
+        Found <span id="missing-var-count">0</span> missing variables across <span id="affected-nodes-count">0</span> nodes.
+      </div>
+      
+      <div id="missing-variables-list" class="panel">
+        <!-- Variables will be listed here dynamically -->
+        <div class="list-item">Loading variables...</div>
+      </div>
+    </div>
+    
+    <div id="affected-nodes" class="tab-content">
+      <div class="stats" id="node-stats">
+        Found <span id="affected-gradients-count">0</span> affected gradients.
+      </div>
+      
+      <div id="affected-nodes-list" class="node-list">
+        <!-- Nodes will be listed here dynamically -->
+        <div class="list-item">Loading nodes...</div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <button id="back-button" class="secondary">Back</button>
+      <button id="rebind-all-button">Rebind All Variables</button>
+    </div>
+  </div>
+  
+  <!-- Step 3: Processing and final results -->
+  <div id="step3" class="section hidden">
+    <div id="processing-indicator" class="progress-indicator">
+      <div class="spinner"></div>
+      <span>Relinking gradient variables...</span>
+    </div>
+    
+    <div id="results-panel" class="panel hidden">
+      <h2>Relinking Complete</h2>
+      <div id="results-summary">
+        <!-- Results will be shown here -->
+      </div>
+    </div>
+    
+    <div class="footer">
+      <button id="new-scan-button" class="secondary">New Scan</button>
+      <button id="close-button">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Global state
+    let scanResults = {
+      affectedNodes: [],
+      missingVariables: [],
+      statistics: {
+        totalGradients: 0,
+        totalMissingVariables: 0,
+        totalNodesScanned: 0
+      }
+    };
+    
+    let variableMappings = {};
+    
+    // UI Elements
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const scanningIndicator = document.getElementById('scanning-indicator');
+    const processingIndicator = document.getElementById('processing-indicator');
+    const resultsPanel = document.getElementById('results-panel');
+    
+    // Scan buttons
+    document.getElementById('scan-selection').addEventListener('click', () => {
+      scanningIndicator.classList.remove('hidden');
+      parent.postMessage({ pluginMessage: { type: 'scan-selection' } }, '*');
+    });
+    
+    document.getElementById('scan-page').addEventListener('click', () => {
+      scanningIndicator.classList.remove('hidden');
+      parent.postMessage({ pluginMessage: { type: 'scan-page' } }, '*');
+    });
+    
+    document.getElementById('scan-document').addEventListener('click', () => {
+      scanningIndicator.classList.remove('hidden');
+      parent.postMessage({ pluginMessage: { type: 'scan-document' } }, '*');
+    });
+    
+    // Navigation buttons
+    document.getElementById('back-button').addEventListener('click', () => {
+      step2.classList.add('hidden');
+      step1.classList.remove('hidden');
+    });
+    
+    document.getElementById('rebind-all-button').addEventListener('click', () => {
+      step2.classList.add('hidden');
+      step3.classList.remove('hidden');
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'rebind-variables', 
+          variableMappings: variableMappings 
+        } 
+      }, '*');
+    });
+    
+    document.getElementById('new-scan-button').addEventListener('click', () => {
+      step3.classList.add('hidden');
+      step1.classList.remove('hidden');
+      processingIndicator.classList.remove('hidden');
+      resultsPanel.classList.add('hidden');
+    });
+    
+    document.getElementById('close-button').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+    });
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Update active tab
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show corresponding content
+        const tabName = tab.getAttribute('data-tab');
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        document.getElementById(tabName).classList.add('active');
+      });
+    });
+    
+    // Handle messages from the plugin
+    window.onmessage = async (event) => {
+      const message = event.data.pluginMessage;
+      
+      if (!message) return;
+      
+      switch (message.type) {
+        case 'scan-complete':
+          handleScanComplete(message.results);
+          break;
+        case 'variables-list':
+          handleVariablesList(message.variables || []);
+          break;
+        case 'rebind-complete':
+          handleRebindComplete(message.results);
+          break;
+        case 'rebind-error':
+          handleRebindError(message.error);
+          break;
+      }
+    };
+    
+    // Handle scan completion
+    function handleScanComplete(results) {
+      scanResults = results;
+      scanningIndicator.classList.add('hidden');
+      
+      // If no missing variables were found
+      if (results.missingVariables.length === 0) {
+        step1.innerHTML = `
+          <div class="info-box">
+            No missing gradient variables were found! All your gradients are properly linked to variables.
+          </div>
+          <button id="new-scan-button" class="secondary">New Scan</button>
+        `;
+        
+        document.getElementById('new-scan-button').addEventListener('click', () => {
+          location.reload();
+        });
+        
+        return;
+      }
+      
+      // Update statistics
+      document.getElementById('missing-var-count').textContent = results.missingVariables.length;
+      document.getElementById('affected-nodes-count').textContent = results.affectedNodes.length;
+      document.getElementById('affected-gradients-count').textContent = results.statistics.totalGradients;
+      
+      // Update missing variables list
+      updateMissingVariablesList(results.missingVariables);
+      
+      // Update affected nodes list
+      updateAffectedNodesList(results.affectedNodes);
+      
+      // Generate mock color variables for demo
+      handleVariablesList(generateMockColorVariables(12));
+      
+      // Show step 2
+      step1.classList.add('hidden');
+      step2.classList.remove('hidden');
+    }
+    
+    // Update the list of missing variables
+    function updateMissingVariablesList(missingVariables) {
+      const listElement = document.getElementById('missing-variables-list');
+      
+      if (missingVariables.length === 0) {
+        listElement.innerHTML = '<div class="list-item">No missing variables found.</div>';
+        return;
+      }
+      
+      let html = '';
+      
+      missingVariables.forEach(variable => {
+        // Create color preview if original color is available
+        let colorPreview = '';
+        if (variable.originalColor) {
+          const { r, g, b } = variable.originalColor;
+          const rgb = `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+          colorPreview = `<span class="color-preview" style="background-color: ${rgb}"></span>`;
+        }
+        
+        html += `
+          <div class="list-item variable-item">
+            <div>
+              ${colorPreview}
+              <span>${variable.name || 'Unknown Variable'}</span>
+              <span class="badge">${variable.occurrences} instances</span>
+            </div>
+            <div>
+              <select id="var-select-${variable.id}" class="variable-selector">
+                <option value="">Select replacement variable</option>
+                <!-- Options will be populated when variables are loaded -->
+              </select>
+            </div>
+          </div>
+        `;
+      });
+      
+      listElement.innerHTML = html;
+    }
+    
+    // Update the list of affected nodes
+    function updateAffectedNodesList(affectedNodes) {
+      const listElement = document.getElementById('affected-nodes-list');
+      
+      if (affectedNodes.length === 0) {
+        listElement.innerHTML = '<div class="list-item">No affected nodes found.</div>';
+        return;
+      }
+      
+      let html = '';
+      
+      affectedNodes.forEach(node => {
+        const gradientTypeBadge = `<span class="badge ${node.gradientType.toLowerCase()}">${node.gradientType}</span>`;
+        
+        html += `
+          <div class="list-item">
+            <div>${node.nodeName} ${gradientTypeBadge}</div>
+            <div class="stats">
+              ${node.affectedStops.length} affected gradient stops
+            </div>
+          </div>
+        `;
+      });
+      
+      listElement.innerHTML = html;
+    }
+    
+    // Generate mock color variables for the demo
+    function generateMockColorVariables(count) {
+      const variables = [];
+      const collections = ['Core Colors', 'Brand Colors', 'UI Colors'];
+      
+      // Generate some color names and hex values
+      const colorNames = [
+        'Primary', 'Secondary', 'Tertiary', 'Accent', 'Background', 
+        'Surface', 'Error', 'Warning', 'Success', 'Info', 
+        'Blue', 'Red', 'Green', 'Yellow', 'Purple', 'Orange', 'Teal'
+      ];
+      
+      for (let i = 0; i < count; i++) {
+        const collectionName = collections[i % collections.length];
+        const colorName = colorNames[i % colorNames.length];
+        const suffix = Math.floor(i / colorNames.length) || '';
+        
+        variables.push({
+          id: `var-${i}`,
+          name: `${colorName}${suffix}`,
+          key: `${colorName.toLowerCase()}${suffix}`,
+          variableCollectionId: `collection-${i % collections.length}`,
+          collectionName,
+          resolvedType: 'COLOR',
+          valuesByMode: {}
+        });
+      }
+      
+      return variables;
+    }
+    
+    // Handle list of available variables
+    function handleVariablesList(variables) {
+      // Populate variable selectors
+      scanResults.missingVariables.forEach(missingVar => {
+        const selector = document.getElementById(`var-select-${missingVar.id}`);
+        
+        if (!selector) return;
+        
+        // Add variable options
+        variables.forEach(variable => {
+          const option = document.createElement('option');
+          option.value = variable.id;
+          option.textContent = `${variable.collectionName} / ${variable.name}`;
+          selector.appendChild(option);
+        });
+        
+        // Add event listener to store the mapping when a selection is made
+        selector.addEventListener('change', (e) => {
+          if (e.target.value) {
+            variableMappings[missingVar.id] = e.target.value;
+          } else {
+            delete variableMappings[missingVar.id];
+          }
+          
+          // Update rebind button state
+          updateRebindButtonState();
+        });
+      });
+      
+      // Update rebind button state
+      updateRebindButtonState();
+    }
+    
+    // Update the state of the rebind button based on selections
+    function updateRebindButtonState() {
+      const rebindButton = document.getElementById('rebind-all-button');
+      const hasMappings = Object.keys(variableMappings).length > 0;
+      
+      rebindButton.disabled = !hasMappings;
+      
+      if (hasMappings) {
+        const mappingCount = Object.keys(variableMappings).length;
+        const totalCount = scanResults.missingVariables.length;
+        rebindButton.textContent = `Rebind ${mappingCount}/${totalCount} Variables`;
+      } else {
+        rebindButton.textContent = 'Rebind All Variables';
+      }
+    }
+    
+    // Handle rebind completion
+    function handleRebindComplete(results) {
+      processingIndicator.classList.add('hidden');
+      resultsPanel.classList.remove('hidden');
+      
+      // For the demo, we'll simulate some results
+      results = results || {
+        successCount: Object.keys(variableMappings).length,
+        failureCount: 0,
+        relinkedNodes: scanResults.affectedNodes.map(node => node.nodeId)
+      };
+      
+      const successRate = results.successCount + results.failureCount > 0 ?
+        Math.round((results.successCount / (results.successCount + results.failureCount)) * 100) : 100;
+      
+      const summaryElement = document.getElementById('results-summary');
+      summaryElement.innerHTML = `
+        <div class="stats">
+          <p>Successfully relinked <strong>${results.successCount}</strong> gradient variables.</p>
+          <p>Failed to relink <strong>${results.failureCount}</strong> gradient variables.</p>
+          <p>Success rate: <strong>${successRate}%</strong></p>
+          <p>Updated <strong>${results.relinkedNodes.length}</strong> nodes in total.</p>
+        </div>
+      `;
+      
+      if (results.failureCount > 0) {
+        summaryElement.innerHTML += `
+          <div class="warning-box">
+            Some variables could not be relinked. This may be due to changes in the document structure 
+            or limitations in Figma's API for binding variables to gradient stops.
+          </div>
+        `;
+      }
+    }
+    
+    // Handle rebind error
+    function handleRebindError(error) {
+      processingIndicator.classList.add('hidden');
+      resultsPanel.classList.remove('hidden');
+      
+      const summaryElement = document.getElementById('results-summary');
+      summaryElement.innerHTML = `
+        <div class="warning-box">
+          An error occurred while relinking gradient variables: ${error || 'Unknown error'}
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

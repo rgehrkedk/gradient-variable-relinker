@@ -1,0 +1,19 @@
+{
+  "name": "Gradient Variable Relinker",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "enablePrivatePluginApi": true,
+  "permissions": [],
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  },
+  "documentAccess": "dynamic-page",
+  "menu": [
+    {
+      "name": "Relink Gradient Variables",
+      "command": "open"
+    }
+  ]
+}
